@@ -1,10 +1,14 @@
 # Textbook-Chapter-QA-Tutor-bot
 
-A Retrieval-Augmented Generation (RAG) chatbot that lets you ask questions about a PDF document and receive context-aware answers powered by Google Gemini.
+A Retrieval-Augmented Generation (RAG) chatbot that lets you ask questions about a PDF document and receive context-aware answers powered by a local LLM running in Ollama.
 
-Instead of relying entirely on an LLM's internal knowledge, the chatbot retrieves relevant text chunks from the PDF using semantic similarity search with FAISS and passes them to Gemini as context.
+Instead of relying entirely on an LLM's internal knowledge, the chatbot retrieves relevant text chunks from the PDF using semantic similarity search with FAISS and passes them to the LLM as context.
 
-Built with **Python, LangChain, Hugging Face, Sentence Transformers, FAISS, and Google Gemini**.
+Built with **Python, LangChain, Hugging Face, Sentence Transformers, FAISS, Ollama, and Streamlit**.
+
+## Presentation
+
+Project slides: [Textbook Tutor Bot PPT.pptx](Textbook%20Tutor%20Bot%20PPT.pptx)
 
 ## Features
 
@@ -12,8 +16,9 @@ Built with **Python, LangChain, Hugging Face, Sentence Transformers, FAISS, and 
 - **Text chunking:** Split documents into overlapping chunks for efficient retrieval.
 - **Semantic embeddings:** Convert text into vectors using `all-MiniLM-L6-v2`.
 - **Vector search:** Retrieve the most relevant chunks using FAISS.
-- **LLM-powered answers:** Generate responses using Google's Gemini API.
+- **Local LLM answers:** Generate responses with `qwen3:1.7b` via Ollama. No API key needed.
 - **Context-grounded prompting:** Instruct the LLM to answer using the retrieved document context.
+- **Streamlit web UI:** Chat in the browser, with streamed answers and source pages.
 - **Interactive CLI:** Ask multiple questions about the PDF in one session.
 - **Modular architecture:** Separate components for ingestion, chunking, embeddings, retrieval, vector storage, prompting, and generation.
 
@@ -54,7 +59,7 @@ Relevant PDF Chunks
  Prompt Template
       |
       v
- Google Gemini
+ Ollama (qwen3:1.7b)
       |
       v
   Final Answer
@@ -71,14 +76,14 @@ Relevant PDF Chunks
 | Sentence Transformers | Text embedding generation |
 | `all-MiniLM-L6-v2` | Semantic embeddings |
 | FAISS | Vector indexing and similarity search |
-| Google Gemini API | Answer generation |
-| `langchain-google-genai` | Gemini integration with LangChain |
-| `python-dotenv` | Environment variable management |
+| Ollama (`qwen3:1.7b`) | Local answer generation |
+| `langchain-ollama` | Ollama integration with LangChain |
+| Streamlit | Web chat interface |
 
 ## Project Structure
 
 ```text
-YouTube_RAG_ChatBot/
+Textbook-Chapter-Q-A-Tutor-bot/
 │
 ├── chunking/
 │   └── chunker.py
@@ -104,9 +109,10 @@ YouTube_RAG_ChatBot/
 ├── vector_store/
 │   └── faiss_store.py
 │
-├── .env
 ├── .gitignore
-├── main.py
+├── app.py            # Streamlit web UI
+├── main.py           # terminal chatbot
+├── instruction.md    # beginner walkthrough
 └── requirements.txt
 ```
 
@@ -156,157 +162,101 @@ When a user submits a question, the retriever performs similarity search and ret
 
 The retrieved chunks are combined into a context string and passed to the existing prompt template along with the user's question.
 
-The prompt instructs Gemini to answer using the supplied context and to acknowledge when the answer is not present.
+The prompt instructs the LLM to answer using the supplied context and to acknowledge when the answer is not present.
 
 ### 7. Answer Generation
 
-Google Gemini receives the constructed prompt and generates the final response. The chatbot prints the text answer in the terminal.
+The local Ollama model receives the constructed prompt and generates the final response, shown in the browser (Streamlit) or terminal (CLI).
 
 ## Installation and Setup
 
 ### Prerequisites
 
-- Python 3.10 or a compatible Python version for the installed dependencies
+- Python 3.10+
 - Git
-- A Google Gemini API key
-- An internet connection for model downloads and Gemini API requests
+- [Ollama](https://ollama.com) installed and running
+- Internet for the first run (downloads packages and the embedding model)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/alobroke/YouTube_RAG_ChatBot.git
-
-cd YouTube_RAG_ChatBot
+git clone https://github.com/TusharParlikar/Textbook-Chapter-Q-A-Tutor-bot.git
+cd Textbook-Chapter-Q-A-Tutor-bot
 ```
 
-### 2. Create a Virtual Environment
+### 2. Pull the LLM
+
+```bash
+ollama pull qwen3:1.7b
+```
+
+To use a different model, pull it and change `model=` in `llm/model.py`.
+
+### 3. Create a Virtual Environment and Install Dependencies
 
 **Windows PowerShell**
 
 ```powershell
 python -m venv .venv
-
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt pypdf
 ```
 
 **Linux / macOS**
 
 ```bash
 python -m venv .venv
-
 source .venv/bin/activate
+pip install -r requirements.txt pypdf
 ```
 
-### 3. Install Dependencies
+The first install is large (PyTorch is several hundred MB).
 
-Install the existing project requirements:
+### 4. Add a PDF
 
-```bash
-pip install -r requirements.txt
-```
-
-Install the additional PDF and Gemini integrations:
-
-```bash
-pip install pypdf langchain-google-genai
-```
-
-## Configure the Gemini API
-
-### 1. Get an API Key
-
-Create an API key through [Google AI Studio](https://aistudio.google.com/apikey).
-
-Gemini API access and billing are separate from a Google AI Pro app subscription; check the applicable API limits and pricing for your account.
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-GOOGLE_API_KEY=your_gemini_api_key
-```
-
-The LLM module loads this key through `python-dotenv`.
-
-**Security:** Never commit `.env` to GitHub. Ensure it is listed in `.gitignore`, and never share your API key publicly.
-
-## Add a PDF Document
-
-Place your PDF inside the `data/` directory.
-
-```text
-data/
-└── your_document.pdf
-```
-
-Update the PDF filename in `main.py` to match the document you want to process.
-
-The current implementation loads a configured PDF file rather than accepting an arbitrary file upload through a web interface.
-
-Text-based PDFs are supported. Scanned PDFs that contain only images may require OCR.
+Put a text-based PDF in the `data/` folder. Scanned PDFs (only images) need OCR first.
 
 ## Run the Chatbot
 
-From the project root, execute:
+Activate the virtual environment first (step 3), then choose one:
+
+### Option A: Web UI (recommended)
+
+```bash
+streamlit run app.py
+```
+
+Open http://localhost:8501. Pick a book in the sidebar, then ask questions. The first load takes about a minute to index the book. Each answer has a **Sources** dropdown with the pages it used.
+
+### Option B: Terminal
+
+Set the PDF filename in `main.py` (`pdf_path`), then:
 
 ```bash
 python main.py
 ```
 
-The application will:
+Type questions at the `Question:` prompt and `exit` to quit.
 
-1. Load the configured PDF.
-2. Split its text into chunks.
-3. Initialize the embedding model.
-4. Create a FAISS vector index.
-5. Initialize the retriever, prompt, and Gemini model.
-6. Start the interactive question-answering loop.
+## Example Questions
 
-## Example Interaction
+- What is the difference between AI engineering and ML engineering?
+- What is in-context learning?
+- When should you finetune instead of using RAG?
+- What is quantization?
 
-```text
-Loading PDF...
-Loaded 250 pages.
-Created 850 chunks.
-
-PDF RAG Chatbot is Ready!
-Type 'exit' to quit.
-
-Question: What is Retrieval-Augmented Generation?
-
-Answer:
-
-Retrieval-Augmented Generation (RAG) combines information
-retrieval with text generation. Relevant information is
-retrieved from a knowledge source and supplied to a
-language model as context for generating a response.
-
-------------------------------------------------------------
-Question: exit
-Exiting PDF RAG Chatbot...
-```
-
-*The page count, chunk count, and answer above are illustrative. Actual values depend on your PDF and model response.*
+For a step-by-step explanation of how the code works, see [instruction.md](instruction.md).
 
 ## Current Limitations
 
-- Processes one configured PDF per run.
-- Rebuilds the FAISS index whenever the application starts.
-- Retrieves a fixed number of relevant chunks.
-- Does not yet display source-page citations with answers.
-- Scanned PDFs may need a separate OCR step.
-- Answer quality depends on PDF extraction, retrieval relevance, and the Gemini model.
+- Rebuilds the FAISS index every time the app starts.
+- Retrieves a fixed number of chunks (`k=3`).
+- Scanned PDFs need a separate OCR step.
+- Answer quality depends on PDF extraction, retrieval relevance, and the local model's size.
 
 ## Future Improvements
 
+- Persist the FAISS index to avoid re-embedding on every run.
 - Support multiple PDFs in one knowledge base.
-- Persist the FAISS index to avoid re-embedding documents on every run.
-- Display page numbers and source references in answers.
-- Add a Streamlit or FastAPI interface.
 - Support scanned documents with OCR.
-- Add document-level filtering and retrieval evaluation.
-
-These are potential extensions and are not part of the current implementation.
-
-
+- Add retrieval evaluation.

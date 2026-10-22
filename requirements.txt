@@ -23,4 +23,6 @@ safetensors>=0.6.0
 numpy>=2.3.0
 tqdm>=4.67.0
 requests>=2.32.0
-langchain-google-genai
+langchain-ollama
+streamlit
+
